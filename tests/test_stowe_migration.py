@@ -1,4 +1,5 @@
 """First-launch copy of Stowe (com.stowe.app) data into Wellslip Desktop."""
+import logging
 import multiprocessing
 import os
 import sqlite3
@@ -159,8 +160,11 @@ def test_failed_copy_keeps_original_sets_notice_and_retries(tmp_path, monkeypatc
 
     monkeypatch.setattr(config.shutil, "copytree", broken)
     assert config.migrate_stowe_data_dir(new, old) == old
-    assert not new.exists()
-    assert not (tmp_path / ".Wellslip Desktop.migrating").exists()
+    # Only the lock may be left, inside the new folder; no partial copy.
+    assert not config._has_data(new)
+    assert not (new / ".stowe-import").exists()
+    assert not (new / "partial").exists()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["Stowe", "Wellslip Desktop"]
     assert "Stowe folder" in config.MIGRATION_NOTICE
     assert any("disk full" in e for e in config._migration_events)
     assert _snapshot(old) == before
@@ -316,3 +320,51 @@ def test_data_dir_endpoint_reports_notice(client, monkeypatch):
     assert body["migration_notice"] == "using the Stowe folder"
     monkeypatch.setattr(config, "MIGRATION_NOTICE", None)
     assert client.get("/api/v1/system/data-dir").json()["migration_notice"] is None
+
+
+def test_lock_file_stays_inside_new_folder(tmp_path):
+    old, new = tmp_path / "Stowe", tmp_path / "Wellslip Desktop"
+    _seed(old)
+    assert config.migrate_stowe_data_dir(new, old) == new
+    # Nothing stray beside the app folders in the shared parent.
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["Stowe", "Wellslip Desktop"]
+    assert not (new / ".stowe-import").exists()
+    assert not (new / ".stowe-import-incomplete").exists()
+    assert _read(new / "database" / "wellslip.db") == ["SQLite ledger"]
+
+
+def test_interrupted_move_is_cleared_and_retried(tmp_path, monkeypatch):
+    old, new = tmp_path / "Stowe", tmp_path / "Wellslip Desktop"
+    _seed(old)
+    before = _snapshot(old)
+    real_replace = config.os.replace
+    calls = {"n": 0}
+
+    def flaky(src, dst):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise OSError("power cut")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(config.os, "replace", flaky)
+    assert config.migrate_stowe_data_dir(new, old) == old
+    assert not config._has_data(new)
+    monkeypatch.undo()
+    config.MIGRATION_NOTICE = None
+    assert config.migrate_stowe_data_dir(new, old) == new
+    assert _read(new / "database" / "wellslip.db") == ["SQLite ledger"]
+    assert not (new / ".stowe-import-incomplete").exists()
+    assert _snapshot(old) == before
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
+def test_migration_log_and_lock_are_owner_only(tmp_path):
+    import stat
+
+    config._note(logging.INFO, "test event")
+    log = config.write_migration_log(tmp_path / "new")
+    assert stat.S_IMODE(log.stat().st_mode) == 0o600
+    with config._migration_lock(tmp_path / "new"):
+        pass
+    lock = tmp_path / "new" / ".wellslip-migration.lock"
+    assert stat.S_IMODE(lock.stat().st_mode) == 0o600

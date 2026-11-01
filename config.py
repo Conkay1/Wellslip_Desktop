@@ -67,8 +67,17 @@ def _legacy_stowe_data_dir() -> Path:
 
 # Files the OS drops into folders on its own. A data folder holding only these
 # (or our own migration.log) still counts as empty.
-_IGNORABLE_NAMES = frozenset({".DS_Store", "desktop.ini", "Thumbs.db", "migration.log"})
 MIGRATION_LOG_NAME = "migration.log"
+MIGRATION_LOCK_NAME = ".wellslip-migration.lock"
+# A folder copy in progress: Stowe data is copied into this subfolder of the
+# Wellslip Desktop folder, then moved up. The marker file is present while the
+# move runs, so a half-moved folder is cleared and retried next launch.
+_IMPORT_STAGING_NAME = ".stowe-import"
+_IMPORT_MARKER_NAME = ".stowe-import-incomplete"
+_IGNORABLE_NAMES = frozenset({
+    ".DS_Store", "desktop.ini", "Thumbs.db", MIGRATION_LOG_NAME,
+    MIGRATION_LOCK_NAME, _IMPORT_STAGING_NAME, _IMPORT_MARKER_NAME,
+})
 
 # Set when the app is running on the old Stowe folder because the copy failed.
 # Shown once per launch in the app (see /api/v1/system/data-dir).
@@ -103,8 +112,10 @@ def write_migration_log(target_dir: Path) -> Path | None:
             path = folder / MIGRATION_LOG_NAME
             if folder != target_dir:
                 path = folder / "wellslip-desktop-migration.log"
-            with open(path, "a", encoding="utf-8") as fh:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with open(fd, "a", encoding="utf-8") as fh:
                 fh.write(lines)
+            restrict_private_file(path)
             _migration_events.clear()
             return path
         except OSError:
@@ -116,14 +127,16 @@ def write_migration_log(target_dir: Path) -> Path | None:
 def _migration_lock(folder: Path):
     """Hold an exclusive lock so two launches can't migrate at the same time.
 
-    Uses ``folder/.wellslip-migration.lock``. If the lock can't be taken (for
+    Uses ``folder/.wellslip-migration.lock``; ``folder`` is always inside the
+    app's own data folder, never the shared parent (Application Support). If the lock can't be taken (for
     example a read-only folder) the migration runs unlocked rather than not at
     all; the staging and re-check logic still keep data safe.
     """
     fh = None
     try:
-        folder.mkdir(parents=True, exist_ok=True)
-        fh = open(folder / ".wellslip-migration.lock", "a+b")
+        folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+        fd = os.open(folder / MIGRATION_LOCK_NAME, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
+        fh = open(fd, "a+b")
         if fcntl is None:
             while True:
                 try:
@@ -166,7 +179,32 @@ def _is_empty_dir(path: Path) -> bool:
 
 
 def _has_data(path: Path) -> bool:
+    # A folder whose import was interrupted mid-move doesn't count as data.
+    if (path / _IMPORT_MARKER_NAME).exists():
+        return False
     return path.is_dir() and not _is_empty_dir(path)
+
+
+def _clear_partial_import(new_dir: Path) -> None:
+    """Remove what an interrupted folder import left in ``new_dir``.
+
+    Only called with the lock held and when ``new_dir`` had no data before the
+    import, so everything but OS clutter, the log and the lock came from it.
+    """
+    staging = new_dir / _IMPORT_STAGING_NAME
+    if staging.exists():
+        shutil.rmtree(staging)
+    marker = new_dir / _IMPORT_MARKER_NAME
+    if not marker.exists():
+        return
+    for child in new_dir.iterdir():
+        if child.name in _IGNORABLE_NAMES:
+            continue
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+    marker.unlink()
 
 
 def snapshot_sqlite(src: Path, dst: Path) -> None:
@@ -251,30 +289,33 @@ def migrate_stowe_data_dir(new_dir: Path, old_dir: Path | None = None) -> Path:
     if _same_path(old_dir, new_dir) or not _has_data(old_dir) or _has_data(new_dir):
         return new_dir
 
-    staging = new_dir.parent / f".{new_dir.name}.migrating"
+    staging = new_dir / _IMPORT_STAGING_NAME
     try:
-        with _migration_lock(new_dir.parent):
+        # The lock lives inside the Wellslip Desktop folder, so nothing is
+        # left beside it in the shared parent folder.
+        with _migration_lock(new_dir):
             # Another launch may have finished while we waited for the lock.
             if _has_data(new_dir):
                 return new_dir
-            if staging.exists():
-                shutil.rmtree(staging)
+            _clear_partial_import(new_dir)
             _copy_stowe_tree(old_dir, staging)
-            if new_dir.exists():
-                # Only OS clutter or an earlier migration.log is here: carry
-                # it over so the log keeps its history, then swap the folder.
-                for child in new_dir.iterdir():
-                    dest = staging / child.name
-                    if not dest.exists():
-                        shutil.move(str(child), str(dest))
+            marker = new_dir / _IMPORT_MARKER_NAME
+            marker.touch()
+            for child in staging.iterdir():
+                dest = new_dir / child.name
+                if dest.exists() and child.name in _IGNORABLE_NAMES:
+                    # Keep our own migration.log / clutter over Stowe's.
+                    if child.is_dir() and not child.is_symlink():
+                        shutil.rmtree(child)
                     else:
                         child.unlink()
-                new_dir.rmdir()
-            os.replace(staging, new_dir)
+                    continue
+                os.replace(child, dest)
+            staging.rmdir()
+            marker.unlink()
     except Exception as exc:
         try:
-            if staging.exists():
-                shutil.rmtree(staging)
+            _clear_partial_import(new_dir)
         except OSError:
             pass
         if _has_data(new_dir):
