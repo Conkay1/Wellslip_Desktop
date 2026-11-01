@@ -8,6 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+import config
 from config import (
     DATA_DIR,
     DATABASE_PATH,
@@ -73,6 +74,8 @@ def get_data_dir():
         "data_dir": str(DATA_DIR),
         "database_path": str(DATABASE_PATH),
         "receipts_dir": str(RECEIPTS_DIR),
+        # Set only when the Stowe data copy failed this launch.
+        "migration_notice": config.MIGRATION_NOTICE,
     }
 
 
