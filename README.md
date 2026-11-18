@@ -4,7 +4,7 @@ _Formerly **Stowe**._
 
 **A personal, local-only tracker for your HSA receipts and expenses.**
 
-[stowe.health](https://stowe.health) · [Releases](https://github.com/Conkay1/Stowe/releases) · MIT License
+[stowe.health](https://stowe.health) · [Releases](https://github.com/Conkay1/Wellslip_Desktop/releases) · MIT License
 
 Wellslip Desktop is a small desktop app for people who pay medical bills out-of-pocket with an HSA and want to defer reimbursement until later — possibly years later. The IRS lets you do this, but only if you can still produce the receipts when you pull the money out. That's what Wellslip Desktop keeps track of.
 
@@ -42,17 +42,17 @@ Existing apps in this space are SaaS products that ask you to upload medical rec
 
 ## Install
 
-Wellslip Desktop 0.8.0 is available for macOS and Windows. You can also run it from source.
+Wellslip Desktop 0.9.0 is available for macOS and Windows. You can also run it from source.
 
 ### macOS
 
-1. Download [`Stowe-0.8.0.dmg`](https://github.com/Conkay1/Stowe/releases/download/v0.8.0/Stowe-0.8.0.dmg).
+1. Download [`Wellslip-Desktop-0.9.0.dmg`](https://github.com/Conkay1/Wellslip_Desktop/releases/download/v0.9.0/Wellslip-Desktop-0.9.0.dmg).
 2. Open the DMG and drag **Wellslip Desktop** into **Applications**.
 3. Open **Wellslip Desktop** from Applications. The build is signed with a Developer ID and notarized by Apple, so it launches normally — no Gatekeeper bypass needed.
 
 ### Windows
 
-1. Download [`Stowe-0.8.0-windows-setup.exe`](https://github.com/Conkay1/Stowe/releases/download/v0.8.0/Stowe-0.8.0-windows-setup.exe).
+1. Download [`Wellslip-Desktop-0.9.0-windows-setup.exe`](https://github.com/Conkay1/Wellslip_Desktop/releases/download/v0.9.0/Wellslip-Desktop-0.9.0-windows-setup.exe).
 2. Run the installer and follow the prompts. No administrator rights are required — Wellslip Desktop installs to `%LOCALAPPDATA%\Programs\Stowe\`.
 3. A Start Menu entry and an optional Desktop shortcut are created automatically.
 4. **Prerequisite:** Microsoft Edge WebView2 Runtime. It ships pre-installed with Windows 10 (version 1803 or later) and Windows 11. If needed, download it from [microsoft.com/edge/webview2](https://developer.microsoft.com/microsoft-edge/webview2/).
@@ -60,7 +60,7 @@ Wellslip Desktop 0.8.0 is available for macOS and Windows. You can also run it f
 
 <!-- unsigned-windows: delete this note when the installer is code-signed -->
 
-The installer isn't code-signed yet, so Windows may say **Windows protected your PC**. Click **More info**, then **Run anyway**. To confirm the file, its SHA-256 is `41ab676291edc32e3b7260b90996a31f60113b8d57ee18ff0c9e3bf406aed3b0`.
+The installer isn't code-signed yet, so Windows may say **Windows protected your PC**. Click **More info**, then **Run anyway**. To confirm the file, its SHA-256 is `SHA256-OF-0.9.0-INSTALLER`.
 
 <!-- /unsigned-windows -->
 
@@ -69,8 +69,8 @@ The installer isn't code-signed yet, so Windows may say **Windows protected your
 Requires Python 3.10 or newer.
 
 ```bash
-git clone https://github.com/Conkay1/Stowe.git
-cd Stowe
+git clone https://github.com/Conkay1/Wellslip_Desktop.git
+cd Wellslip_Desktop
 python3 run.py
 ```
 

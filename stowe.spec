@@ -121,8 +121,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'Wellslip Desktop',
         'CFBundleDisplayName': 'Wellslip Desktop',
-        'CFBundleVersion': '0.8.0',
-        'CFBundleShortVersionString': '0.8.0',
+        'CFBundleVersion': '0.9.0',
+        'CFBundleShortVersionString': '0.9.0',
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '11.0',
         'NSHumanReadableCopyright': 'Copyright (c) 2026 Connor Kay. MIT License.',

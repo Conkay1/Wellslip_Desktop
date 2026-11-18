@@ -6,6 +6,22 @@ All notable changes to Wellslip Desktop (formerly Stowe) are documented here. Th
 
 ## [Unreleased]
 
+## [0.9.0] — release date TBD
+
+### Added
+- **Audited cost corrections.** In the Vault, **Manage → Correct cost…** changes an expense's documented cost after an insurance adjustment, with a preview, a required reason, and a stored before/after record. Pulls, distributions, and receipts are left as they were, and accounts show records that need reconciling. See `docs/expense-corrections.md`.
+- **Receipt context checks.** Receipt analysis checks the file name and the receipt text against the expense, and existing expense hints are kept when a receipt disagrees with them.
+
+### Fixed
+- **Uploads stay responsive when OCR stalls.** OCR runs in at most two child processes, each with a 10-second limit. A failed or timed-out read leaves the receipt saved; use Re-analyze to retry.
+- **Image OCR and receipt previews work inside the packaged app.** Thanks to @jzupnick (#24).
+- **Theme choice persists** across restarts in the packaged app.
+- **CSV export keeps negative ledger amounts numeric.**
+
+### Security
+- **CSV formula neutralization.** A merchant, category, or note that starts with `=`, `+`, `-`, `@`, tab, or carriage return is written to the CSV as text, so a spreadsheet does not run it.
+- **Receipt display names are sanitized.**
+
 ### Changed
 - **Stowe is now Wellslip Desktop.** The window title, app UI, README, and docs use the new name. Wellslip Mobile and Wellslip Sync are the companion phone app and optional sync service.
 - **New macOS bundle ID `com.wellslip.desktop`.** The app is now `Wellslip Desktop.app` and the DMG is `Wellslip-Desktop-<version>.dmg`. macOS treats it as a new app: delete the old Stowe app after the first launch and approve permissions again once. The Windows installer keeps the same AppId, so it upgrades Stowe in place; it is now `Wellslip-Desktop-<version>-windows-setup.exe`.

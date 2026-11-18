@@ -5,7 +5,7 @@
 ; Output:   Wellslip-Desktop-0.8.0-windows-setup.exe
 
 #define AppName      "Wellslip Desktop"
-#define AppVersion   "0.8.0"
+#define AppVersion   "0.9.0"
 #define AppPublisher "Connor Kay"
 #define AppURL       "https://stowe.health"
 #define AppExeName   "Stowe.exe"
