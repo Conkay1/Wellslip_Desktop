@@ -60,7 +60,7 @@ Wellslip Desktop 0.9.0 is available for macOS and Windows. You can also run it f
 
 <!-- unsigned-windows: delete this note when the installer is code-signed -->
 
-The installer isn't code-signed yet, so Windows may say **Windows protected your PC**. Click **More info**, then **Run anyway**. To confirm the file, its SHA-256 is `SHA256-OF-0.9.0-INSTALLER`.
+The installer isn't code-signed yet, so Windows may say **Windows protected your PC**. Click **More info**, then **Run anyway**. To confirm the file, its SHA-256 is `801eb627dcf803d10d601ca76c4762c389fff054d0e88fba3ddb7e77ae9d4e87`.
 
 <!-- /unsigned-windows -->
 
